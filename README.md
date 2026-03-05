@@ -1,48 +1,115 @@
-# URU vNext (Supabase-only)
+<p align="center">
+  <img src="./header.png" alt="URU header" />
+</p>
 
-URU is now a single desktop app focused on managing the Dost project with a Supabase-only architecture.
+# URU vNext
 
-## Core decisions
+Desktop operations app for Dost, built with Tauri + React and a Supabase-only backend.
 
-- Single app at repository root (no monorepo, no mobile app)
-- Supabase only (`@supabase/supabase-js`) with JWT session
-- Strict RLS for all business tables
-- RPC-driven transactional operations for checkout/order/payment/inventory
-- No SQLite runtime, no local CRUD via Tauri `invoke`
+## Overview
 
-## Quick start
+- Single desktop app at repository root (no monorepo, no mobile companion)
+- Supabase is the only business data backend (`@supabase/supabase-js`)
+- JWT session + strict RLS for sensitive tables
+- Transactional business flows exposed via SQL RPC
+- No local SQLite runtime and no business CRUD in Tauri backend
 
-1. Install dependencies
+## Prerequisites
+
+- Node.js 20+
+- `pnpm`
+- Rust toolchain (for Tauri desktop build)
+- Tauri system dependencies (see Tauri docs for your OS)
+- Supabase CLI (`supabase`)
+- Docker (optional, only for `local-reset` mode)
+
+## Quick Start
+
+1. Install dependencies:
 
 ```bash
 pnpm install
 ```
 
-2. Configure environment
+2. Configure environment in `.env.local`:
 
 ```bash
-cp .env.example .env
-# fill VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY
+cat <<'EOF' > .env.local
+VITE_SUPABASE_URL=https://YOUR_PROJECT_REF.supabase.co
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=YOUR_PUBLISHABLE_KEY
+EOF
 ```
 
-3. Reset/apply Supabase schema
+3. Link and reset/apply schema on the linked Supabase project:
 
 ```bash
-./setup_database_and_data.sh
+./setup_database_and_data.sh linked-reset
 ```
 
-4. Run desktop app
+4. Run desktop app:
 
 ```bash
 pnpm dev
 ```
 
-## Key paths
+5. Optional web-only development mode:
 
-- Supabase client: `src/lib/supabase/client.ts`
-- Auth/session layer: `src/lib/supabase/auth.ts`
-- Repositories: `src/lib/db/repositories`
-- SQL contract: `supabase/migrations`
-- Desktop backend shell: `src-tauri/src/lib.rs`
+```bash
+pnpm dev:web
+```
 
-See `docs/ARCHITECTURE.md` for architecture details.
+## Database Workflow
+
+`setup_database_and_data.sh` supports:
+
+- `linked-reset` (default): reset linked remote DB and reapply local migrations
+- `linked-push`: push pending migrations to linked remote DB (no full reset)
+- `linked-lint`: run migration lint checks in linked project
+- `local-reset`: reset local Supabase stack (`supabase start`/Docker required)
+
+Useful flags and env vars:
+
+- `--relink` or `URU_FORCE_RELINK=YES`: force `supabase link`
+- `SUPABASE_DB_PASSWORD`: avoid repeated password prompts
+- `URU_CONFIRM_RESET=YES`: skip interactive reset confirmation (CI/automation only)
+
+## Scripts
+
+- `pnpm dev`: run desktop app (Tauri)
+- `pnpm dev:web`: run web app only on port `3000`
+- `pnpm build`: production web build
+- `pnpm preview`: preview build output
+- `pnpm test`: run tests via Vitest
+- `pnpm lint`: run ESLint
+- `pnpm format`: run Prettier
+- `pnpm check`: format and auto-fix lint issues
+
+## Project Structure
+
+- `src/routes`: app routes (`/login`, `/products`, `/orders`, `/inventory`, `/settings`)
+- `src/lib/supabase`: Supabase client, auth, and error handling
+- `src/lib/db/repositories`: data-access layer over Supabase
+- `supabase/migrations`: schema, RLS policies, and RPC contract
+- `src-tauri/src/lib.rs`: desktop shell (no business DB ownership)
+
+## Security Model
+
+- Authentication source: Supabase Auth
+- Role model: `admin`, `operator`, `analyst`
+- RLS enabled for business tables
+- Critical state transitions implemented as server-side RPC
+
+## Troubleshooting
+
+- `Supabase is not configured...`:
+  - Ensure `.env.local` has `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY`
+  - Restart `pnpm dev` after editing env vars
+- Auth/network errors in desktop app:
+  - Check firewall/VPN/proxy rules
+  - Confirm Supabase project URL/key validity
+  - Retry after restarting the app
+
+## Docs
+
+- `docs/ARCHITECTURE.md`
+- `docs/SCHEMA.md`

@@ -11,25 +11,21 @@ import {
   SidebarHeader,
   SidebarInput,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar'
 import { SCHEMA_TABLE_GROUPS, SCHEMA_TABLES } from '@/lib/schema-tables'
+import type { SchemaTableName } from '@/lib/schema-registry'
 
 type AppSidebarProps = {
   pathname: string
 }
 
-const APP_NAV_ITEMS: Array<{
-  label: string
-  to: '/products' | '/orders' | '/inventory' | '/settings'
-}> = [
-  { label: 'Produtos', to: '/products' },
-  { label: 'Pedidos', to: '/orders' },
-  { label: 'Estoque', to: '/inventory' },
-  { label: 'Configurações', to: '/settings' },
+const APP_NAV_ITEMS: Array<{ label: string; table: SchemaTableName }> = [
+  { label: 'Produtos', table: 'products' },
+  { label: 'Pedidos', table: 'orders' },
+  { label: 'Estoque', table: 'inventory_levels' },
 ]
 
 export function AppSidebar({ pathname }: AppSidebarProps) {
@@ -46,6 +42,7 @@ export function AppSidebar({ pathname }: AppSidebarProps) {
       tables: group.tables.filter((table) => {
         return (
           table.name.toLowerCase().includes(normalized) ||
+          table.label.toLowerCase().includes(normalized) ||
           table.description.toLowerCase().includes(normalized)
         )
       }),
@@ -76,19 +73,27 @@ export function AppSidebar({ pathname }: AppSidebarProps) {
           <SidebarGroupLabel>Módulos</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {APP_NAV_ITEMS.map((item) => (
-                <SidebarMenuItem key={item.to}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={pathname === item.to}
-                    tooltip={item.label}
-                  >
-                    <Link to={item.to}>
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {APP_NAV_ITEMS.map((item) => {
+                const isActive = pathname === `/tables/${item.table}`
+
+                return (
+                  <SidebarMenuItem key={item.table}>
+                    <SidebarMenuButton asChild isActive={isActive} tooltip={item.label}>
+                      <Link to="/tables/$table" params={{ table: item.table }}>
+                        <span>{item.label}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )
+              })}
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/settings'} tooltip="Configurações">
+                  <Link to="/settings">
+                    <span>Configurações</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
@@ -107,31 +112,19 @@ export function AppSidebar({ pathname }: AppSidebarProps) {
                 <div key={group.key} className="space-y-1">
                   <p className="text-muted-foreground px-2 text-[11px] font-medium uppercase tracking-wide">{group.label}</p>
                   <SidebarMenu>
-                    {group.tables.map((table) => (
-                      <SidebarMenuItem key={table.name}>
-                        {table.route ? (
-                          <SidebarMenuButton
-                            asChild
-                            className="h-7"
-                            isActive={pathname === table.route}
-                            tooltip={table.description}
-                          >
-                            <Link to={table.route}>
+                    {group.tables.map((table) => {
+                      const tablePath = `/tables/${table.name}`
+
+                      return (
+                        <SidebarMenuItem key={table.name}>
+                          <SidebarMenuButton asChild className="h-7" isActive={pathname === tablePath} tooltip={table.description}>
+                            <Link to="/tables/$table" params={{ table: table.name }}>
                               <span className="font-mono text-[11px]">{table.name}</span>
                             </Link>
                           </SidebarMenuButton>
-                        ) : (
-                          <SidebarMenuButton
-                            disabled
-                            className="h-7 cursor-default opacity-70"
-                            tooltip={table.description}
-                          >
-                            <span className="font-mono text-[11px]">{table.name}</span>
-                          </SidebarMenuButton>
-                        )}
-                        {!table.route ? <SidebarMenuBadge>schema</SidebarMenuBadge> : null}
-                      </SidebarMenuItem>
-                    ))}
+                        </SidebarMenuItem>
+                      )
+                    })}
                   </SidebarMenu>
                 </div>
               ))
