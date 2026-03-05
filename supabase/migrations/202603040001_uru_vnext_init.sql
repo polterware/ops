@@ -596,10 +596,10 @@ begin
     raise exception 'Insufficient inventory available';
   end if;
 
-  update public.inventory_levels
-  set quantity_reserved = quantity_reserved + p_quantity,
-      quantity_available = quantity_available - p_quantity
-  where id = v_level.id;
+  update public.inventory_levels as il
+  set quantity_reserved = il.quantity_reserved + p_quantity,
+      quantity_available = il.quantity_available - p_quantity
+  where il.id = v_level.id;
 
   insert into public.inventory_movements (
     inventory_level_id,
@@ -660,10 +660,10 @@ begin
     raise exception 'Not enough reserved quantity to release';
   end if;
 
-  update public.inventory_levels
-  set quantity_reserved = quantity_reserved - p_quantity,
-      quantity_available = quantity_available + p_quantity
-  where id = v_level.id;
+  update public.inventory_levels as il
+  set quantity_reserved = il.quantity_reserved - p_quantity,
+      quantity_available = il.quantity_available + p_quantity
+  where il.id = v_level.id;
 
   insert into public.inventory_movements (
     inventory_level_id,
@@ -1006,11 +1006,11 @@ begin
     raise exception 'Order not found';
   end if;
 
-  update public.orders
-  set status = coalesce(p_status, status),
-      payment_status = coalesce(p_payment_status, payment_status),
-      fulfillment_status = coalesce(p_fulfillment_status, fulfillment_status)
-  where id = v_order.id;
+  update public.orders as o
+  set status = coalesce(p_status, o.status),
+      payment_status = coalesce(p_payment_status, o.payment_status),
+      fulfillment_status = coalesce(p_fulfillment_status, o.fulfillment_status)
+  where o.id = v_order.id;
 
   return query
   select v_order.id, coalesce(p_status, v_order.status);
