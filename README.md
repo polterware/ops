@@ -167,6 +167,14 @@ Pin a specific release when needed:
 npx @polterware/polterbase@latest app install uru --version 1.0.0
 ```
 
+Update an existing installation without rewriting the runtime connection:
+
+```bash
+npx @polterware/polterbase@latest app update uru
+```
+
+This update flow replaces the installed `uru.app` while preserving runtime configuration, local settings, and existing Supabase session data stored outside the app bundle.
+
 ## CLI Commands
 
 The `pnpm uru` CLI is now intentionally minimal and only starts local development:
@@ -187,6 +195,7 @@ The `pnpm uru` CLI is now intentionally minimal and only starts local developmen
 - `npx polterbase app migrate uru local-reset --path .` — reset the local Docker stack
 - `npx polterbase app configure uru --path .` — rewrite `.env.local` and runtime bootstrap payload
 - `npx @polterware/polterbase@latest app install uru [--version <version>]` — install the macOS `.app` through Polterbase, then configure runtime Supabase connection
+- `npx @polterware/polterbase@latest app update uru [--version <version>]` — replace an existing macOS install while preserving persisted runtime/app state
 
 ## Other Scripts
 
