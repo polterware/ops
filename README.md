@@ -153,25 +153,19 @@ npx polterbase app configure uru --path .
 
 ### 4. Install the macOS app
 
-Use the public installer:
+Install through Polterbase:
 
 ```bash
-curl -fsSL https://rckbrcls.github.io/uru-docs/install.sh | bash
+npx @polterware/polterbase@latest app install uru
 ```
 
-Or call Polterbase directly:
-
-```bash
-npx @polterware/polterbase@latest app install uru --platform macos
-```
+This install flow is macOS-only today. Polterbase resolves the latest release from `polterware/uru`, downloads the artifact, installs the `.app`, writes the Supabase bootstrap payload, and can open the app after installation.
 
 Pin a specific release when needed:
 
 ```bash
-npx @polterware/polterbase@latest app install uru --platform macos --version 1.0.0
+npx @polterware/polterbase@latest app install uru --version 1.0.0
 ```
-
-Polterbase resolves the latest release from `polterware/uru`, downloads the artifact, installs the `.app`, writes the Supabase bootstrap payload, and can open the app after installation.
 
 ## CLI Commands
 
@@ -192,8 +186,7 @@ The `pnpm uru` CLI is now intentionally minimal and only starts local developmen
 - `npx polterbase app migrate uru reset --path .` — reset linked remote DB
 - `npx polterbase app migrate uru local-reset --path .` — reset the local Docker stack
 - `npx polterbase app configure uru --path .` — rewrite `.env.local` and runtime bootstrap payload
-- `curl -fsSL https://rckbrcls.github.io/uru-docs/install.sh | bash` — install the public macOS release through the thin site installer
-- `npx @polterware/polterbase@latest app install uru --platform macos [--version <version>]` — install the macOS `.app` directly through Polterbase, then configure runtime Supabase connection
+- `npx @polterware/polterbase@latest app install uru [--version <version>]` — install the macOS `.app` through Polterbase, then configure runtime Supabase connection
 
 ## Other Scripts
 
