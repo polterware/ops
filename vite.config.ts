@@ -15,7 +15,14 @@ const config = defineConfig({
       projects: ["./tsconfig.json"],
     }),
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      spa: {
+        // Tauri expects a root index.html inside frontendDist.
+        prerender: {
+          outputPath: "/index",
+        },
+      },
+    }),
     viteReact(),
   ],
 });
