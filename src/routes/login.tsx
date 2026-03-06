@@ -123,7 +123,7 @@ function LoginPage() {
           <CardTitle className="text-xl">Sign in to Urú</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="bg-muted/50 mb-4 rounded-md border p-3 text-xs">
+          <div className="bg-primary/6 mb-4 rounded-md border border-primary/15 p-3 text-xs">
             <p className="font-medium">Connected project</p>
             <p className="text-muted-foreground break-all">{config.url}</p>
             <p className="text-muted-foreground">

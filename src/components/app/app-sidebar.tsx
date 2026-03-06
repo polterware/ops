@@ -71,7 +71,7 @@ export function AppSidebar({ pathname }: AppSidebarProps) {
     <Sidebar>
       <SidebarHeader className="pt-4 md:pt-6">
         <div className="px-2 py-1">
-          <p className="font-brand text-xl">Urú</p>
+          <p className="text-primary font-brand text-xl">Urú</p>
         </div>
         <SidebarInput
           aria-label="Filter tables"
@@ -188,7 +188,7 @@ function SidebarSectionDropdown({
           className="text-muted-foreground hover:text-foreground flex w-full items-center justify-between px-2 text-[11px] font-medium uppercase tracking-wide transition-colors"
         >
           <span className="flex items-center gap-1.5">
-            <Icon className="size-3.5" />
+            <Icon className="text-primary/80 size-3.5" />
             {title}
           </span>
           <ChevronDownIcon

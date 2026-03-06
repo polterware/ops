@@ -219,7 +219,7 @@ function RootLayout() {
                 <SidebarTrigger className="shrink-0" />
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium">{pageTitle}</p>
-                  <p className="text-muted-foreground hidden text-xs sm:block">
+                  <p className="text-primary/70 hidden text-xs sm:block">
                     Schema-driven data console
                   </p>
                 </div>
