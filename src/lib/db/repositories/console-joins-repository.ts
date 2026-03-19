@@ -21,6 +21,12 @@ export type ShipmentItemDraft = {
   quantity: number;
 };
 
+export type ProductSizeDraft = {
+  id?: string;
+  size: string;
+  quantity: number;
+};
+
 function normalizeIds(ids: Array<string>): Array<string> {
   return Array.from(
     new Set(ids.map((item) => item.trim()).filter((item) => item.length > 0)),
@@ -293,5 +299,51 @@ export const ConsoleJoinsRepository = {
       items_count: number;
       items_quantity_total: number;
     }>(data);
+  },
+
+  async getProductSizes(productId: string): Promise<Array<ProductSizeDraft>> {
+    const supabase = getSupabaseClient() as any;
+    const { data, error } = await supabase.rpc(
+      "console_product_sizes_detail",
+      {
+        p_product_id: productId,
+      },
+    );
+
+    if (error) {
+      handleSupabaseError(error);
+    }
+
+    return ((data ?? []) as Array<ProductSizeDraft>).map((item) => ({
+      id: item.id,
+      size: item.size,
+      quantity: Number(item.quantity),
+    }));
+  },
+
+  async syncProductSizes(
+    productId: string,
+    sizes: Array<ProductSizeDraft>,
+  ): Promise<{ sizes_count: number } | null> {
+    const supabase = getSupabaseClient() as any;
+    const payload = sizes.map((item) => ({
+      id: item.id ?? null,
+      size: item.size,
+      quantity: Number(item.quantity),
+    }));
+
+    const { data, error } = await supabase.rpc(
+      "console_product_sizes_sync",
+      {
+        p_product_id: productId,
+        p_sizes: payload,
+      },
+    );
+
+    if (error) {
+      handleSupabaseError(error);
+    }
+
+    return extractFirstRow<{ sizes_count: number }>(data);
   },
 };

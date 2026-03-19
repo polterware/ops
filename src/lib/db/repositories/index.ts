@@ -14,6 +14,7 @@ export { SalesAnalyticsRepository } from "./analytics/sales-analytics-repository
 export type { TableLookupOption } from "./table-crud-repository";
 export type {
   OrderItemDraft,
+  ProductSizeDraft,
   ShipmentItemDraft,
   TransactionItemDraft,
 } from "./console-joins-repository";

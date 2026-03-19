@@ -10,6 +10,7 @@ import type {
 } from "@/lib/schema-registry";
 import type {
   OrderItemDraft,
+  ProductSizeDraft,
   ShipmentItemDraft,
   TableLookupOption,
   TransactionItemDraft,
@@ -122,6 +123,12 @@ type TransactionItemFormRow = {
 type ShipmentItemFormRow = {
   id?: string;
   orderItemId: string;
+  quantity: string;
+};
+
+type ProductSizeFormRow = {
+  id?: string;
+  size: string;
   quantity: string;
 };
 
@@ -624,6 +631,9 @@ function TablesBySchemaPage() {
   const [shipmentItemRows, setShipmentItemRows] = useState<
     Array<ShipmentItemFormRow>
   >([]);
+  const [productSizeRows, setProductSizeRows] = useState<
+    Array<ProductSizeFormRow>
+  >([]);
 
   const [orderStatusForm, setOrderStatusForm] = useState<OrderStatusForm>({
     orderId: "",
@@ -659,6 +669,7 @@ function TablesBySchemaPage() {
     setOrderItemRows([]);
     setTransactionItemRows([]);
     setShipmentItemRows([]);
+    setProductSizeRows([]);
   }, []);
 
   const loadJoinEditorData = useCallback(
@@ -691,9 +702,18 @@ function TablesBySchemaPage() {
             break;
           }
           case "product_tags": {
-            const tagIds =
-              await ConsoleJoinsRepository.getProductTagIds(recordId);
+            const [tagIds, sizes] = await Promise.all([
+              ConsoleJoinsRepository.getProductTagIds(recordId),
+              ConsoleJoinsRepository.getProductSizes(recordId),
+            ]);
             setProductTagIds(tagIds);
+            setProductSizeRows(
+              sizes.map((s) => ({
+                id: s.id,
+                size: s.size,
+                quantity: String(s.quantity),
+              })),
+            );
             break;
           }
           case "order_items": {
@@ -1037,6 +1057,24 @@ function TablesBySchemaPage() {
               recordId,
               productTagIds,
             );
+
+            // Sync product sizes alongside tags
+            const hasSizes = formValues.has_size_options === true;
+            if (hasSizes && productSizeRows.length > 0) {
+              const normalizedSizes = productSizeRows
+                .filter((row) => row.size.trim().length > 0)
+                .map<ProductSizeDraft>((row) => ({
+                  id: row.id,
+                  size: row.size.trim(),
+                  quantity: parseInt(row.quantity) || 0,
+                }));
+              await ConsoleJoinsRepository.syncProductSizes(
+                recordId,
+                normalizedSizes,
+              );
+            } else if (!hasSizes) {
+              await ConsoleJoinsRepository.syncProductSizes(recordId, []);
+            }
             break;
           }
           case "order_items": {
@@ -1501,7 +1539,19 @@ function TablesBySchemaPage() {
             {(dialogMode === "create"
               ? getCreatableFields(config)
               : getUpdatableFields(config)
-            ).map((field) => {
+            )
+            .filter((field) => {
+              // Hide quantity field when product has size options (quantity is per-size)
+              if (
+                config.table === "products" &&
+                field.key === "quantity" &&
+                formValues.has_size_options === true
+              ) {
+                return false;
+              }
+              return true;
+            })
+            .map((field) => {
               const isRelation = Boolean(field.relation);
               const isBoolean = field.type === "boolean";
               const isEnum = field.type === "enum";
@@ -1844,6 +1894,103 @@ function TablesBySchemaPage() {
                       ))}
                     </div>
                   )}
+                </div>
+              ) : null}
+
+              {!isJoinDataLoading &&
+              config.table === "products" &&
+              formValues.has_size_options === true ? (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Product sizes</Label>
+                    <Button
+                      type="button"
+                      size="xs"
+                      variant="outline"
+                      onClick={() => {
+                        setProductSizeRows((current) => [
+                          ...current,
+                          { size: "", quantity: "0" },
+                        ]);
+                      }}
+                    >
+                      Add size
+                    </Button>
+                  </div>
+
+                  {productSizeRows.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">
+                      No sizes configured. Add sizes to manage per-size
+                      quantities.
+                    </p>
+                  ) : null}
+
+                  {productSizeRows.map((item, index) => (
+                    <div
+                      key={item.id ?? `product-size-${index}`}
+                      className="grid gap-2 md:grid-cols-12"
+                    >
+                      <div className="md:col-span-5">
+                        <Input
+                          type="text"
+                          placeholder="Size (e.g. P, M, G)"
+                          value={item.size}
+                          onChange={(event) => {
+                            setProductSizeRows((current) =>
+                              current.map((entry, entryIndex) => {
+                                if (entryIndex !== index) {
+                                  return entry;
+                                }
+                                return {
+                                  ...entry,
+                                  size: event.target.value,
+                                };
+                              }),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="md:col-span-4">
+                        <Input
+                          type="number"
+                          min="0"
+                          placeholder="Quantity"
+                          value={item.quantity}
+                          onChange={(event) => {
+                            setProductSizeRows((current) =>
+                              current.map((entry, entryIndex) => {
+                                if (entryIndex !== index) {
+                                  return entry;
+                                }
+                                return {
+                                  ...entry,
+                                  quantity: event.target.value,
+                                };
+                              }),
+                            );
+                          }}
+                        />
+                      </div>
+
+                      <div className="md:col-span-3">
+                        <Button
+                          type="button"
+                          size="xs"
+                          variant="destructive"
+                          onClick={() => {
+                            setProductSizeRows((current) =>
+                              current.filter(
+                                (_, entryIndex) => entryIndex !== index,
+                              ),
+                            );
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ) : null}
 
