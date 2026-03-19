@@ -53,6 +53,11 @@ export type RelationConfig = {
   ascending?: boolean;
 };
 
+export type FieldGroupConfig = {
+  key: string;
+  label: string;
+};
+
 export type FieldConfig = {
   key: string;
   label: string;
@@ -65,6 +70,7 @@ export type FieldConfig = {
   autoValue?: "current_user_id" | "current_timestamp";
   options?: Array<FieldOption>;
   relation?: RelationConfig;
+  group?: string;
 };
 
 export type FieldConfigWithRelation = FieldConfig & {
@@ -106,6 +112,7 @@ export type TableConfig = {
   fields: Array<FieldConfig>;
   transactionalActions?: Array<TransactionalActionKind>;
   joinEditor?: JoinEditorKind;
+  fieldGroups?: Array<FieldGroupConfig>;
 };
 
 const LIFECYCLE_OPTIONS: Array<FieldOption> = [
@@ -470,16 +477,25 @@ export const SCHEMA_REGISTRY: Array<TableConfig> = [
       { key: "lifecycle_status", label: "Status", type: "enum" },
       { key: "created_at", label: "Created at", type: "datetime" },
     ],
+    fieldGroups: [
+      { key: "identity", label: "Identity" },
+      { key: "catalog", label: "Catalog" },
+      { key: "pricing", label: "Pricing" },
+      { key: "inventory", label: "Inventory" },
+      { key: "shipping", label: "Shipping" },
+      { key: "metadata", label: "Metadata" },
+    ],
     fields: withStandardTableMeta(
       withLifecycleAndTimestamps([
-        { key: "sku", label: "SKU", type: "text", required: true },
-        { key: "slug", label: "Slug", type: "text", required: true },
-        { key: "title", label: "Title", type: "text", required: true },
+        { key: "sku", label: "SKU", type: "text", required: true, group: "identity" },
+        { key: "slug", label: "Slug", type: "text", required: true, group: "identity" },
+        { key: "title", label: "Title", type: "text", required: true, group: "identity" },
         {
           key: "description",
           label: "Description",
           type: "textarea",
           nullable: true,
+          group: "identity",
         },
         {
           key: "images",
@@ -487,12 +503,14 @@ export const SCHEMA_REGISTRY: Array<TableConfig> = [
           type: "array",
           required: true,
           defaultValue: [],
+          group: "identity",
         },
         {
           key: "category_id",
           label: "Category",
           type: "uuid",
           nullable: true,
+          group: "catalog",
           relation: {
             table: "categories",
             valueField: "id",
@@ -506,6 +524,7 @@ export const SCHEMA_REGISTRY: Array<TableConfig> = [
           label: "Brand",
           type: "uuid",
           nullable: true,
+          group: "catalog",
           relation: {
             table: "brands",
             valueField: "id",
@@ -519,6 +538,7 @@ export const SCHEMA_REGISTRY: Array<TableConfig> = [
           label: "Line",
           type: "uuid",
           nullable: true,
+          group: "catalog",
           relation: {
             table: "lines",
             valueField: "id",
@@ -533,29 +553,33 @@ export const SCHEMA_REGISTRY: Array<TableConfig> = [
           type: "currency",
           required: true,
           defaultValue: 0,
+          group: "pricing",
         },
-        { key: "cost", label: "Cost", type: "currency", nullable: true },
+        { key: "cost", label: "Cost", type: "currency", nullable: true, group: "pricing" },
         {
           key: "is_published",
           label: "Published",
           type: "boolean",
           defaultValue: false,
+          group: "catalog",
         },
         {
           key: "has_size_options",
           label: "Has size options",
           type: "boolean",
           defaultValue: false,
+          group: "inventory",
         },
-        { key: "quantity", label: "Quantity", type: "number", nullable: true },
-        { key: "weight", label: "Weight (kg)", type: "number", nullable: true },
-        { key: "height", label: "Height (cm)", type: "number", nullable: true },
-        { key: "width", label: "Width (cm)", type: "number", nullable: true },
+        { key: "quantity", label: "Quantity", type: "number", nullable: true, group: "inventory" },
+        { key: "weight", label: "Weight (kg)", type: "number", nullable: true, group: "shipping" },
+        { key: "height", label: "Height (cm)", type: "number", nullable: true, group: "shipping" },
+        { key: "width", label: "Width (cm)", type: "number", nullable: true, group: "shipping" },
         {
           key: "depth",
           label: "Depth (cm)",
           type: "number",
           nullable: true,
+          group: "shipping",
         },
         {
           key: "metadata",
@@ -563,6 +587,7 @@ export const SCHEMA_REGISTRY: Array<TableConfig> = [
           type: "metadata",
           required: true,
           defaultValue: {},
+          group: "metadata",
         },
         createdByField("created_by", "Created by"),
       ]),

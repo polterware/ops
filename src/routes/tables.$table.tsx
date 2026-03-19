@@ -598,6 +598,1193 @@ function buildDataTableFilters(
   return filters;
 }
 
+// ---------------------------------------------------------------------------
+// Extracted field renderer — shared between flat and grouped layouts
+// ---------------------------------------------------------------------------
+
+function renderFormField(
+  field: FieldConfig,
+  formValues: Record<string, unknown>,
+  setFormValues: React.Dispatch<React.SetStateAction<Record<string, unknown>>>,
+  lookupsByField: LookupsByField,
+  config: TableConfig,
+  dialogMode: DialogMode,
+): React.ReactNode {
+  const isRelation = Boolean(field.relation);
+  const isBoolean = field.type === "boolean";
+  const isEnum = field.type === "enum";
+  const isTextArea =
+    field.type === "textarea" ||
+    field.type === "json" ||
+    field.type === "metadata" ||
+    field.type === "array";
+  const isDate = field.type === "date";
+  const isDateTime = field.type === "datetime";
+  const isNumber =
+    field.type === "integer" ||
+    field.type === "number" ||
+    field.type === "currency";
+  const textareaPlaceholder = getFieldTextareaPlaceholder(config, field);
+  const inputHint = getFieldInputHint(config, field);
+
+  const value = formValues[field.key];
+
+  return (
+    <div
+      key={field.key}
+      className={isTextArea ? "space-y-2 md:col-span-2" : "space-y-2"}
+    >
+      <Label htmlFor={`field-${field.key}`}>
+        {field.label}
+        {field.required ? (
+          <span className="text-destructive"> *</span>
+        ) : null}
+      </Label>
+
+      {isRelation ? (
+        <Select
+          value={String(value ?? "") || SELECT_NONE}
+          onValueChange={(nextValue) => {
+            setFormValues((current) => ({
+              ...current,
+              [field.key]: nextValue === SELECT_NONE ? "" : nextValue,
+            }));
+          }}
+        >
+          <SelectTrigger id={`field-${field.key}`}>
+            <SelectValue placeholder={`Select ${field.label}`} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={SELECT_NONE}>None</SelectItem>
+            {lookupsByField[field.key]?.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
+
+      {isEnum ? (
+        <Select
+          value={String(value ?? "") || SELECT_NONE}
+          onValueChange={(nextValue) => {
+            setFormValues((current) => ({
+              ...current,
+              [field.key]: nextValue === SELECT_NONE ? "" : nextValue,
+            }));
+          }}
+        >
+          <SelectTrigger id={`field-${field.key}`}>
+            <SelectValue placeholder={`Select ${field.label}`} />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={SELECT_NONE}>
+              {field.nullable ? "None" : "Select"}
+            </SelectItem>
+            {field.options?.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      ) : null}
+
+      {isBoolean ? (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id={`field-${field.key}`}
+            checked={Boolean(value)}
+            onCheckedChange={(checked) => {
+              setFormValues((current) => ({
+                ...current,
+                [field.key]: Boolean(checked),
+              }));
+            }}
+          />
+          <Label htmlFor={`field-${field.key}`}>Enabled</Label>
+        </div>
+      ) : null}
+
+      {isTextArea ? (
+        <Textarea
+          id={`field-${field.key}`}
+          placeholder={textareaPlaceholder}
+          value={String(value ?? "")}
+          onChange={(event) => {
+            setFormValues((current) => ({
+              ...current,
+              [field.key]: event.target.value,
+            }));
+          }}
+        />
+      ) : null}
+
+      {inputHint ? (
+        <p className="text-muted-foreground text-xs">{inputHint}</p>
+      ) : null}
+
+      {isDate ? (
+        <Input
+          id={`field-${field.key}`}
+          type="date"
+          value={String(value ?? "")}
+          onChange={(event) => {
+            setFormValues((current) => ({
+              ...current,
+              [field.key]: event.target.value,
+            }));
+          }}
+        />
+      ) : null}
+
+      {isDateTime ? (
+        <Input
+          id={`field-${field.key}`}
+          type="datetime-local"
+          value={String(value ?? "")}
+          onChange={(event) => {
+            setFormValues((current) => ({
+              ...current,
+              [field.key]: event.target.value,
+            }));
+          }}
+        />
+      ) : null}
+
+      {isNumber ? (
+        <Input
+          id={`field-${field.key}`}
+          type="number"
+          step={field.type === "integer" ? "1" : "0.01"}
+          value={String(value ?? "")}
+          onChange={(event) => {
+            setFormValues((current) => ({
+              ...current,
+              [field.key]: event.target.value,
+            }));
+          }}
+        />
+      ) : null}
+
+      {!isRelation &&
+      !isEnum &&
+      !isBoolean &&
+      !isTextArea &&
+      !isDate &&
+      !isDateTime &&
+      !isNumber ? (
+        <Input
+          id={`field-${field.key}`}
+          value={String(value ?? "")}
+          onChange={(event) => {
+            const newValue = event.target.value;
+
+            setFormValues((current) => {
+              const nextValues = {
+                ...current,
+                [field.key]: newValue,
+              };
+
+              if (
+                config.table === "products" &&
+                dialogMode === "create" &&
+                field.key === "title"
+              ) {
+                const currentSlug = String(current.slug ?? "");
+                const currentSku = String(current.sku ?? "");
+
+                const oldAutoSlug = slugify(String(current.title ?? ""));
+                const oldAutoSku = oldAutoSlug
+                  .toUpperCase()
+                  .replace(/-/g, "_");
+
+                if (currentSlug === "" || currentSlug === oldAutoSlug) {
+                  nextValues.slug = slugify(newValue);
+                }
+
+                if (currentSku === "" || currentSku === oldAutoSku) {
+                  nextValues.sku = slugify(newValue)
+                    .toUpperCase()
+                    .replace(/-/g, "_");
+                }
+              }
+
+              return nextValues;
+            });
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Flat grid layout (default for all non-products tables)
+// ---------------------------------------------------------------------------
+
+function renderFlatFields({
+  config,
+  dialogMode,
+  formValues,
+  setFormValues,
+  lookupsByField,
+}: {
+  config: TableConfig;
+  dialogMode: DialogMode;
+  formValues: Record<string, unknown>;
+  setFormValues: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  lookupsByField: LookupsByField;
+}) {
+  const fields = (
+    dialogMode === "create"
+      ? getCreatableFields(config)
+      : getUpdatableFields(config)
+  ).filter((field) => {
+    if (
+      config.table === "products" &&
+      field.key === "quantity" &&
+      formValues.has_size_options === true
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      {fields.map((field) =>
+        renderFormField(
+          field,
+          formValues,
+          setFormValues,
+          lookupsByField,
+          config,
+          dialogMode,
+        ),
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Grouped card layout (products — opt-in via config.fieldGroups)
+// ---------------------------------------------------------------------------
+
+function renderProductSizesInline({
+  productSizeRows,
+  setProductSizeRows,
+}: {
+  productSizeRows: Array<ProductSizeFormRow>;
+  setProductSizeRows: React.Dispatch<
+    React.SetStateAction<Array<ProductSizeFormRow>>
+  >;
+}) {
+  return (
+    <div className="space-y-3 pt-2">
+      <div className="flex items-center justify-between">
+        <Label>Product sizes</Label>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          onClick={() => {
+            setProductSizeRows((current) => [
+              ...current,
+              { size: "", quantity: "0" },
+            ]);
+          }}
+        >
+          Add size
+        </Button>
+      </div>
+
+      {productSizeRows.length === 0 ? (
+        <p className="text-muted-foreground text-sm">
+          No sizes configured. Add sizes to manage per-size quantities.
+        </p>
+      ) : null}
+
+      {productSizeRows.map((item, index) => (
+        <div
+          key={item.id ?? `product-size-${index}`}
+          className="grid gap-2 md:grid-cols-12"
+        >
+          <div className="md:col-span-5">
+            <Input
+              type="text"
+              placeholder="Size (e.g. P, M, G)"
+              value={item.size}
+              onChange={(event) => {
+                setProductSizeRows((current) =>
+                  current.map((entry, entryIndex) => {
+                    if (entryIndex !== index) {
+                      return entry;
+                    }
+                    return { ...entry, size: event.target.value };
+                  }),
+                );
+              }}
+            />
+          </div>
+
+          <div className="md:col-span-4">
+            <Input
+              type="number"
+              min="0"
+              placeholder="Quantity"
+              value={item.quantity}
+              onChange={(event) => {
+                setProductSizeRows((current) =>
+                  current.map((entry, entryIndex) => {
+                    if (entryIndex !== index) {
+                      return entry;
+                    }
+                    return { ...entry, quantity: event.target.value };
+                  }),
+                );
+              }}
+            />
+          </div>
+
+          <div className="md:col-span-3">
+            <Button
+              type="button"
+              size="xs"
+              variant="destructive"
+              onClick={() => {
+                setProductSizeRows((current) =>
+                  current.filter((_, entryIndex) => entryIndex !== index),
+                );
+              }}
+            >
+              Remove
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function renderProductTagsCard({
+  isJoinDataLoading,
+  productTagOptions,
+  productTagIds,
+  setProductTagIds,
+  dialogMode,
+}: {
+  isJoinDataLoading: boolean;
+  productTagOptions: Array<TableLookupOption>;
+  productTagIds: Array<string>;
+  setProductTagIds: React.Dispatch<React.SetStateAction<Array<string>>>;
+  dialogMode: DialogMode;
+}) {
+  if (dialogMode !== "edit") {
+    return null;
+  }
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-sm">Tags</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isJoinDataLoading ? (
+          <p className="text-muted-foreground text-sm">Loading tags...</p>
+        ) : productTagOptions.length === 0 ? (
+          <p className="text-muted-foreground text-sm">
+            No tag options available.
+          </p>
+        ) : (
+          <div className="grid gap-2 md:grid-cols-2">
+            {productTagOptions.map((option) => (
+              <label
+                key={option.value}
+                className="flex items-center gap-2 rounded-md border px-2 py-1"
+              >
+                <Checkbox
+                  checked={productTagIds.includes(option.value)}
+                  onCheckedChange={(checked) => {
+                    setProductTagIds((current) => {
+                      if (checked) {
+                        return Array.from(
+                          new Set([...current, option.value]),
+                        );
+                      }
+                      return current.filter(
+                        (item) => item !== option.value,
+                      );
+                    });
+                  }}
+                />
+                <span className="text-sm">{option.label}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function renderGroupedFields({
+  config,
+  dialogMode,
+  formValues,
+  setFormValues,
+  lookupsByField,
+  isJoinDataLoading,
+  productTagOptions,
+  productTagIds,
+  setProductTagIds,
+  productSizeRows,
+  setProductSizeRows,
+}: {
+  config: TableConfig;
+  dialogMode: DialogMode;
+  formValues: Record<string, unknown>;
+  setFormValues: React.Dispatch<React.SetStateAction<Record<string, unknown>>>;
+  lookupsByField: LookupsByField;
+  isJoinDataLoading: boolean;
+  productTagOptions: Array<TableLookupOption>;
+  productTagIds: Array<string>;
+  setProductTagIds: React.Dispatch<React.SetStateAction<Array<string>>>;
+  productSizeRows: Array<ProductSizeFormRow>;
+  setProductSizeRows: React.Dispatch<
+    React.SetStateAction<Array<ProductSizeFormRow>>
+  >;
+}) {
+  const allFields = (
+    dialogMode === "create"
+      ? getCreatableFields(config)
+      : getUpdatableFields(config)
+  ).filter((field) => {
+    if (
+      config.table === "products" &&
+      field.key === "quantity" &&
+      formValues.has_size_options === true
+    ) {
+      return false;
+    }
+    return true;
+  });
+
+  const fieldGroups = config.fieldGroups ?? [];
+
+  // Group fields by their group key
+  const fieldsByGroup = new Map<string, Array<FieldConfig>>();
+  const ungroupedFields: Array<FieldConfig> = [];
+
+  for (const field of allFields) {
+    if (field.group) {
+      const existing = fieldsByGroup.get(field.group) ?? [];
+      existing.push(field);
+      fieldsByGroup.set(field.group, existing);
+    } else {
+      ungroupedFields.push(field);
+    }
+  }
+
+  const hasSizes =
+    config.table === "products" && formValues.has_size_options === true;
+
+  return (
+    <div className="space-y-4">
+      {fieldGroups.map((group) => {
+        const groupFields = fieldsByGroup.get(group.key);
+        if (!groupFields || groupFields.length === 0) {
+          return null;
+        }
+
+        const isInventoryGroup = group.key === "inventory";
+
+        return (
+          <Card key={group.key}>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">{group.label}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-2">
+                {groupFields.map((field) =>
+                  renderFormField(
+                    field,
+                    formValues,
+                    setFormValues,
+                    lookupsByField,
+                    config,
+                    dialogMode,
+                  ),
+                )}
+              </div>
+
+              {isInventoryGroup &&
+              hasSizes &&
+              dialogMode === "edit" &&
+              !isJoinDataLoading
+                ? renderProductSizesInline({
+                    productSizeRows,
+                    setProductSizeRows,
+                  })
+                : null}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      {renderProductTagsCard({
+        isJoinDataLoading,
+        productTagOptions,
+        productTagIds,
+        setProductTagIds,
+        dialogMode,
+      })}
+
+      {ungroupedFields.length > 0 ? (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">System</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2">
+              {ungroupedFields.map((field) =>
+                renderFormField(
+                  field,
+                  formValues,
+                  setFormValues,
+                  lookupsByField,
+                  config,
+                  dialogMode,
+                ),
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Related Records section (non-products tables that have joinEditor)
+// ---------------------------------------------------------------------------
+
+function RelatedRecordsSection({
+  config,
+  isJoinDataLoading,
+  profileRoleOptions,
+  profileRoleIds,
+  setProfileRoleIds,
+  customerGroupOptions,
+  customerGroupIds,
+  setCustomerGroupIds,
+  productTagOptions,
+  productTagIds,
+  setProductTagIds,
+  formValues,
+  productSizeRows,
+  setProductSizeRows,
+  orderItemProductOptions,
+  orderItemRows,
+  setOrderItemRows,
+  transactionItemRows,
+  setTransactionItemRows,
+  shipmentOrderItemOptions,
+  shipmentItemRows,
+  setShipmentItemRows,
+}: {
+  config: TableConfig;
+  isJoinDataLoading: boolean;
+  profileRoleOptions: Array<TableLookupOption>;
+  profileRoleIds: Array<string>;
+  setProfileRoleIds: React.Dispatch<React.SetStateAction<Array<string>>>;
+  customerGroupOptions: Array<TableLookupOption>;
+  customerGroupIds: Array<string>;
+  setCustomerGroupIds: React.Dispatch<React.SetStateAction<Array<string>>>;
+  productTagOptions: Array<TableLookupOption>;
+  productTagIds: Array<string>;
+  setProductTagIds: React.Dispatch<React.SetStateAction<Array<string>>>;
+  formValues: Record<string, unknown>;
+  productSizeRows: Array<ProductSizeFormRow>;
+  setProductSizeRows: React.Dispatch<
+    React.SetStateAction<Array<ProductSizeFormRow>>
+  >;
+  orderItemProductOptions: Array<TableLookupOption>;
+  orderItemRows: Array<OrderItemFormRow>;
+  setOrderItemRows: React.Dispatch<
+    React.SetStateAction<Array<OrderItemFormRow>>
+  >;
+  transactionItemRows: Array<TransactionItemFormRow>;
+  setTransactionItemRows: React.Dispatch<
+    React.SetStateAction<Array<TransactionItemFormRow>>
+  >;
+  shipmentOrderItemOptions: Array<TableLookupOption>;
+  shipmentItemRows: Array<ShipmentItemFormRow>;
+  setShipmentItemRows: React.Dispatch<
+    React.SetStateAction<Array<ShipmentItemFormRow>>
+  >;
+}) {
+  return (
+    <div className="space-y-3 rounded-md border p-4">
+      <div>
+        <p className="text-sm font-semibold">Related Records</p>
+        <p className="text-muted-foreground text-xs">
+          Manage linked records directly from this form.
+        </p>
+      </div>
+
+      {isJoinDataLoading ? (
+        <p className="text-muted-foreground text-sm">
+          Loading related records...
+        </p>
+      ) : null}
+
+      {!isJoinDataLoading && config.joinEditor === "profile_roles" ? (
+        <div className="space-y-2">
+          <Label>Roles</Label>
+          {profileRoleOptions.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No role options available.
+            </p>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2">
+              {profileRoleOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 rounded-md border px-2 py-1"
+                >
+                  <Checkbox
+                    checked={profileRoleIds.includes(option.value)}
+                    onCheckedChange={(checked) => {
+                      setProfileRoleIds((current) => {
+                        if (checked) {
+                          return Array.from(
+                            new Set([...current, option.value]),
+                          );
+                        }
+                        return current.filter(
+                          (item) => item !== option.value,
+                        );
+                      });
+                    }}
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {!isJoinDataLoading && config.joinEditor === "customer_groups" ? (
+        <div className="space-y-2">
+          <Label>Customer groups</Label>
+          {customerGroupOptions.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No customer-group options available.
+            </p>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2">
+              {customerGroupOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 rounded-md border px-2 py-1"
+                >
+                  <Checkbox
+                    checked={customerGroupIds.includes(option.value)}
+                    onCheckedChange={(checked) => {
+                      setCustomerGroupIds((current) => {
+                        if (checked) {
+                          return Array.from(
+                            new Set([...current, option.value]),
+                          );
+                        }
+                        return current.filter(
+                          (item) => item !== option.value,
+                        );
+                      });
+                    }}
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {!isJoinDataLoading && config.joinEditor === "product_tags" ? (
+        <div className="space-y-2">
+          <Label>Tags</Label>
+          {productTagOptions.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No tag options available.
+            </p>
+          ) : (
+            <div className="grid gap-2 md:grid-cols-2">
+              {productTagOptions.map((option) => (
+                <label
+                  key={option.value}
+                  className="flex items-center gap-2 rounded-md border px-2 py-1"
+                >
+                  <Checkbox
+                    checked={productTagIds.includes(option.value)}
+                    onCheckedChange={(checked) => {
+                      setProductTagIds((current) => {
+                        if (checked) {
+                          return Array.from(
+                            new Set([...current, option.value]),
+                          );
+                        }
+                        return current.filter(
+                          (item) => item !== option.value,
+                        );
+                      });
+                    }}
+                  />
+                  <span className="text-sm">{option.label}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
+      {!isJoinDataLoading &&
+      config.table === "products" &&
+      formValues.has_size_options === true ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Product sizes</Label>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => {
+                setProductSizeRows((current) => [
+                  ...current,
+                  { size: "", quantity: "0" },
+                ]);
+              }}
+            >
+              Add size
+            </Button>
+          </div>
+
+          {productSizeRows.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No sizes configured. Add sizes to manage per-size quantities.
+            </p>
+          ) : null}
+
+          {productSizeRows.map((item, index) => (
+            <div
+              key={item.id ?? `product-size-${index}`}
+              className="grid gap-2 md:grid-cols-12"
+            >
+              <div className="md:col-span-5">
+                <Input
+                  type="text"
+                  placeholder="Size (e.g. P, M, G)"
+                  value={item.size}
+                  onChange={(event) => {
+                    setProductSizeRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return { ...entry, size: event.target.value };
+                      }),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="md:col-span-4">
+                <Input
+                  type="number"
+                  min="0"
+                  placeholder="Quantity"
+                  value={item.quantity}
+                  onChange={(event) => {
+                    setProductSizeRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return { ...entry, quantity: event.target.value };
+                      }),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="md:col-span-3">
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="destructive"
+                  onClick={() => {
+                    setProductSizeRows((current) =>
+                      current.filter(
+                        (_, entryIndex) => entryIndex !== index,
+                      ),
+                    );
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {!isJoinDataLoading && config.joinEditor === "order_items" ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Order items</Label>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => {
+                setOrderItemRows((current) => [
+                  ...current,
+                  { productId: "", quantity: "1", unitPrice: "0" },
+                ]);
+              }}
+            >
+              Add item
+            </Button>
+          </div>
+
+          {orderItemRows.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No items configured.
+            </p>
+          ) : null}
+
+          {orderItemRows.map((item, index) => (
+            <div
+              key={item.id ?? `order-item-${index}`}
+              className="grid gap-2 md:grid-cols-12"
+            >
+              <div className="md:col-span-5">
+                <Select
+                  value={item.productId || SELECT_NONE}
+                  onValueChange={(nextValue) => {
+                    setOrderItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return {
+                          ...entry,
+                          productId:
+                            nextValue === SELECT_NONE ? "" : nextValue,
+                        };
+                      }),
+                    );
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select product" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SELECT_NONE}>None</SelectItem>
+                    {orderItemProductOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-2">
+                <Input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(event) => {
+                    setOrderItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return { ...entry, quantity: event.target.value };
+                      }),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="md:col-span-3">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.unitPrice}
+                  onChange={(event) => {
+                    setOrderItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return { ...entry, unitPrice: event.target.value };
+                      }),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="destructive"
+                  onClick={() => {
+                    setOrderItemRows((current) =>
+                      current.filter(
+                        (_, entryIndex) => entryIndex !== index,
+                      ),
+                    );
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {!isJoinDataLoading && config.joinEditor === "transaction_items" ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Transaction items</Label>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => {
+                setTransactionItemRows((current) => [
+                  ...current,
+                  { kind: "product", referenceId: "", amount: "0" },
+                ]);
+              }}
+            >
+              Add item
+            </Button>
+          </div>
+
+          {transactionItemRows.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No items configured.
+            </p>
+          ) : null}
+
+          {transactionItemRows.map((item, index) => (
+            <div
+              key={item.id ?? `transaction-item-${index}`}
+              className="grid gap-2 md:grid-cols-12"
+            >
+              <div className="md:col-span-3">
+                <Select
+                  value={item.kind}
+                  onValueChange={(nextValue) => {
+                    setTransactionItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return {
+                          ...entry,
+                          kind: nextValue as TransactionItemDraft["kind"],
+                        };
+                      }),
+                    );
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Kind" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TRANSACTION_ITEM_KIND_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-5">
+                <Input
+                  value={item.referenceId}
+                  placeholder="Reference id (optional)"
+                  onChange={(event) => {
+                    setTransactionItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return {
+                          ...entry,
+                          referenceId: event.target.value,
+                        };
+                      }),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={item.amount}
+                  onChange={(event) => {
+                    setTransactionItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return { ...entry, amount: event.target.value };
+                      }),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="destructive"
+                  onClick={() => {
+                    setTransactionItemRows((current) =>
+                      current.filter(
+                        (_, entryIndex) => entryIndex !== index,
+                      ),
+                    );
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      {!isJoinDataLoading && config.joinEditor === "shipment_items" ? (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <Label>Shipment items</Label>
+            <Button
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={() => {
+                setShipmentItemRows((current) => [
+                  ...current,
+                  { orderItemId: "", quantity: "1" },
+                ]);
+              }}
+            >
+              Add item
+            </Button>
+          </div>
+
+          {shipmentItemRows.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No items configured.
+            </p>
+          ) : null}
+
+          {shipmentItemRows.map((item, index) => (
+            <div
+              key={item.id ?? `shipment-item-${index}`}
+              className="grid gap-2 md:grid-cols-12"
+            >
+              <div className="md:col-span-7">
+                <Select
+                  value={item.orderItemId || SELECT_NONE}
+                  onValueChange={(nextValue) => {
+                    setShipmentItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return {
+                          ...entry,
+                          orderItemId:
+                            nextValue === SELECT_NONE ? "" : nextValue,
+                        };
+                      }),
+                    );
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select order item" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={SELECT_NONE}>None</SelectItem>
+                    {shipmentOrderItemOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="md:col-span-3">
+                <Input
+                  type="number"
+                  min="1"
+                  value={item.quantity}
+                  onChange={(event) => {
+                    setShipmentItemRows((current) =>
+                      current.map((entry, entryIndex) => {
+                        if (entryIndex !== index) {
+                          return entry;
+                        }
+                        return { ...entry, quantity: event.target.value };
+                      }),
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <Button
+                  type="button"
+                  size="xs"
+                  variant="destructive"
+                  onClick={() => {
+                    setShipmentItemRows((current) =>
+                      current.filter(
+                        (_, entryIndex) => entryIndex !== index,
+                      ),
+                    );
+                  }}
+                >
+                  Remove
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function TablesBySchemaPage() {
   const params = Route.useParams();
   const { user } = Route.useLoaderData();
@@ -1535,844 +2722,55 @@ function TablesBySchemaPage() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            {(dialogMode === "create"
-              ? getCreatableFields(config)
-              : getUpdatableFields(config)
-            )
-            .filter((field) => {
-              // Hide quantity field when product has size options (quantity is per-size)
-              if (
-                config.table === "products" &&
-                field.key === "quantity" &&
-                formValues.has_size_options === true
-              ) {
-                return false;
-              }
-              return true;
-            })
-            .map((field) => {
-              const isRelation = Boolean(field.relation);
-              const isBoolean = field.type === "boolean";
-              const isEnum = field.type === "enum";
-              const isTextArea =
-                field.type === "textarea" ||
-                field.type === "json" ||
-                field.type === "metadata" ||
-                field.type === "array";
-              const isDate = field.type === "date";
-              const isDateTime = field.type === "datetime";
-              const isNumber =
-                field.type === "integer" ||
-                field.type === "number" ||
-                field.type === "currency";
-              const textareaPlaceholder = getFieldTextareaPlaceholder(
+          {config.fieldGroups
+            ? renderGroupedFields({
                 config,
-                field,
-              );
-              const inputHint = getFieldInputHint(config, field);
+                dialogMode,
+                formValues,
+                setFormValues,
+                lookupsByField,
+                isJoinDataLoading,
+                productTagOptions,
+                productTagIds,
+                setProductTagIds,
+                productSizeRows,
+                setProductSizeRows,
+              })
+            : renderFlatFields({
+                config,
+                dialogMode,
+                formValues,
+                setFormValues,
+                lookupsByField,
+              })}
 
-              const value = formValues[field.key];
-
-              return (
-                <div
-                  key={field.key}
-                  className={
-                    isTextArea ? "space-y-2 md:col-span-2" : "space-y-2"
-                  }
-                >
-                  <Label htmlFor={`field-${field.key}`}>
-                    {field.label}
-                    {field.required ? (
-                      <span className="text-destructive"> *</span>
-                    ) : null}
-                  </Label>
-
-                  {isRelation ? (
-                    <Select
-                      value={String(value ?? "") || SELECT_NONE}
-                      onValueChange={(nextValue) => {
-                        setFormValues((current) => ({
-                          ...current,
-                          [field.key]:
-                            nextValue === SELECT_NONE ? "" : nextValue,
-                        }));
-                      }}
-                    >
-                      <SelectTrigger id={`field-${field.key}`}>
-                        <SelectValue placeholder={`Select ${field.label}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SELECT_NONE}>None</SelectItem>
-                        {lookupsByField[field.key]?.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : null}
-
-                  {isEnum ? (
-                    <Select
-                      value={String(value ?? "") || SELECT_NONE}
-                      onValueChange={(nextValue) => {
-                        setFormValues((current) => ({
-                          ...current,
-                          [field.key]:
-                            nextValue === SELECT_NONE ? "" : nextValue,
-                        }));
-                      }}
-                    >
-                      <SelectTrigger id={`field-${field.key}`}>
-                        <SelectValue placeholder={`Select ${field.label}`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value={SELECT_NONE}>
-                          {field.nullable ? "None" : "Select"}
-                        </SelectItem>
-                        {field.options?.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  ) : null}
-
-                  {isBoolean ? (
-                    <div className="flex items-center gap-2">
-                      <Checkbox
-                        id={`field-${field.key}`}
-                        checked={Boolean(value)}
-                        onCheckedChange={(checked) => {
-                          setFormValues((current) => ({
-                            ...current,
-                            [field.key]: Boolean(checked),
-                          }));
-                        }}
-                      />
-                      <Label htmlFor={`field-${field.key}`}>Enabled</Label>
-                    </div>
-                  ) : null}
-
-                  {isTextArea ? (
-                    <Textarea
-                      id={`field-${field.key}`}
-                      placeholder={textareaPlaceholder}
-                      value={String(value ?? "")}
-                      onChange={(event) => {
-                        setFormValues((current) => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }));
-                      }}
-                    />
-                  ) : null}
-
-                  {inputHint ? (
-                    <p className="text-muted-foreground text-xs">{inputHint}</p>
-                  ) : null}
-
-                  {isDate ? (
-                    <Input
-                      id={`field-${field.key}`}
-                      type="date"
-                      value={String(value ?? "")}
-                      onChange={(event) => {
-                        setFormValues((current) => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }));
-                      }}
-                    />
-                  ) : null}
-
-                  {isDateTime ? (
-                    <Input
-                      id={`field-${field.key}`}
-                      type="datetime-local"
-                      value={String(value ?? "")}
-                      onChange={(event) => {
-                        setFormValues((current) => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }));
-                      }}
-                    />
-                  ) : null}
-
-                  {isNumber ? (
-                    <Input
-                      id={`field-${field.key}`}
-                      type="number"
-                      step={field.type === "integer" ? "1" : "0.01"}
-                      value={String(value ?? "")}
-                      onChange={(event) => {
-                        setFormValues((current) => ({
-                          ...current,
-                          [field.key]: event.target.value,
-                        }));
-                      }}
-                    />
-                  ) : null}
-
-                  {!isRelation &&
-                  !isEnum &&
-                  !isBoolean &&
-                  !isTextArea &&
-                  !isDate &&
-                  !isDateTime &&
-                  !isNumber ? (
-                    <Input
-                      id={`field-${field.key}`}
-                      value={String(value ?? "")}
-                      onChange={(event) => {
-                        const newValue = event.target.value;
-
-                        setFormValues((current) => {
-                          const nextValues = {
-                            ...current,
-                            [field.key]: newValue,
-                          };
-
-                          if (
-                            config.table === "products" &&
-                            dialogMode === "create" &&
-                            field.key === "title"
-                          ) {
-                            const currentSlug = String(current.slug ?? "");
-                            const currentSku = String(current.sku ?? "");
-
-                            const oldAutoSlug = slugify(String(current.title ?? ""));
-                            const oldAutoSku = oldAutoSlug.toUpperCase().replace(/-/g, "_");
-
-                            if (currentSlug === "" || currentSlug === oldAutoSlug) {
-                              nextValues.slug = slugify(newValue);
-                            }
-
-                            if (currentSku === "" || currentSku === oldAutoSku) {
-                              nextValues.sku = slugify(newValue)
-                                .toUpperCase()
-                                .replace(/-/g, "_");
-                            }
-                          }
-
-                          return nextValues;
-                        });
-                      }}
-                    />
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-
-          {dialogMode === "edit" && config.joinEditor ? (
-            <div className="space-y-3 rounded-md border p-4">
-              <div>
-                <p className="text-sm font-semibold">Related Records</p>
-                <p className="text-muted-foreground text-xs">
-                  Manage linked records directly from this form.
-                </p>
-              </div>
-
-              {isJoinDataLoading ? (
-                <p className="text-muted-foreground text-sm">
-                  Loading related records...
-                </p>
-              ) : null}
-
-              {!isJoinDataLoading && config.joinEditor === "profile_roles" ? (
-                <div className="space-y-2">
-                  <Label>Roles</Label>
-                  {profileRoleOptions.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No role options available.
-                    </p>
-                  ) : (
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {profileRoleOptions.map((option) => (
-                        <label
-                          key={option.value}
-                          className="flex items-center gap-2 rounded-md border px-2 py-1"
-                        >
-                          <Checkbox
-                            checked={profileRoleIds.includes(option.value)}
-                            onCheckedChange={(checked) => {
-                              setProfileRoleIds((current) => {
-                                if (checked) {
-                                  return Array.from(
-                                    new Set([...current, option.value]),
-                                  );
-                                }
-
-                                return current.filter(
-                                  (item) => item !== option.value,
-                                );
-                              });
-                            }}
-                          />
-                          <span className="text-sm">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {!isJoinDataLoading && config.joinEditor === "customer_groups" ? (
-                <div className="space-y-2">
-                  <Label>Customer groups</Label>
-                  {customerGroupOptions.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No customer-group options available.
-                    </p>
-                  ) : (
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {customerGroupOptions.map((option) => (
-                        <label
-                          key={option.value}
-                          className="flex items-center gap-2 rounded-md border px-2 py-1"
-                        >
-                          <Checkbox
-                            checked={customerGroupIds.includes(option.value)}
-                            onCheckedChange={(checked) => {
-                              setCustomerGroupIds((current) => {
-                                if (checked) {
-                                  return Array.from(
-                                    new Set([...current, option.value]),
-                                  );
-                                }
-
-                                return current.filter(
-                                  (item) => item !== option.value,
-                                );
-                              });
-                            }}
-                          />
-                          <span className="text-sm">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {!isJoinDataLoading && config.joinEditor === "product_tags" ? (
-                <div className="space-y-2">
-                  <Label>Tags</Label>
-                  {productTagOptions.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No tag options available.
-                    </p>
-                  ) : (
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {productTagOptions.map((option) => (
-                        <label
-                          key={option.value}
-                          className="flex items-center gap-2 rounded-md border px-2 py-1"
-                        >
-                          <Checkbox
-                            checked={productTagIds.includes(option.value)}
-                            onCheckedChange={(checked) => {
-                              setProductTagIds((current) => {
-                                if (checked) {
-                                  return Array.from(
-                                    new Set([...current, option.value]),
-                                  );
-                                }
-
-                                return current.filter(
-                                  (item) => item !== option.value,
-                                );
-                              });
-                            }}
-                          />
-                          <span className="text-sm">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ) : null}
-
-              {!isJoinDataLoading &&
-              config.table === "products" &&
-              formValues.has_size_options === true ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Product sizes</Label>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="outline"
-                      onClick={() => {
-                        setProductSizeRows((current) => [
-                          ...current,
-                          { size: "", quantity: "0" },
-                        ]);
-                      }}
-                    >
-                      Add size
-                    </Button>
-                  </div>
-
-                  {productSizeRows.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No sizes configured. Add sizes to manage per-size
-                      quantities.
-                    </p>
-                  ) : null}
-
-                  {productSizeRows.map((item, index) => (
-                    <div
-                      key={item.id ?? `product-size-${index}`}
-                      className="grid gap-2 md:grid-cols-12"
-                    >
-                      <div className="md:col-span-5">
-                        <Input
-                          type="text"
-                          placeholder="Size (e.g. P, M, G)"
-                          value={item.size}
-                          onChange={(event) => {
-                            setProductSizeRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-                                return {
-                                  ...entry,
-                                  size: event.target.value,
-                                };
-                              }),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div className="md:col-span-4">
-                        <Input
-                          type="number"
-                          min="0"
-                          placeholder="Quantity"
-                          value={item.quantity}
-                          onChange={(event) => {
-                            setProductSizeRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-                                return {
-                                  ...entry,
-                                  quantity: event.target.value,
-                                };
-                              }),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div className="md:col-span-3">
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="destructive"
-                          onClick={() => {
-                            setProductSizeRows((current) =>
-                              current.filter(
-                                (_, entryIndex) => entryIndex !== index,
-                              ),
-                            );
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {!isJoinDataLoading && config.joinEditor === "order_items" ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Order items</Label>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="outline"
-                      onClick={() => {
-                        setOrderItemRows((current) => [
-                          ...current,
-                          {
-                            productId: "",
-                            quantity: "1",
-                            unitPrice: "0",
-                          },
-                        ]);
-                      }}
-                    >
-                      Add item
-                    </Button>
-                  </div>
-
-                  {orderItemRows.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No items configured.
-                    </p>
-                  ) : null}
-
-                  {orderItemRows.map((item, index) => (
-                    <div
-                      key={item.id ?? `order-item-${index}`}
-                      className="grid gap-2 md:grid-cols-12"
-                    >
-                      <div className="md:col-span-5">
-                        <Select
-                          value={item.productId || SELECT_NONE}
-                          onValueChange={(nextValue) => {
-                            setOrderItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  productId:
-                                    nextValue === SELECT_NONE ? "" : nextValue,
-                                };
-                              }),
-                            );
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select product" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={SELECT_NONE}>None</SelectItem>
-                            {orderItemProductOptions.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(event) => {
-                            setOrderItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  quantity: event.target.value,
-                                };
-                              }),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div className="md:col-span-3">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.unitPrice}
-                          onChange={(event) => {
-                            setOrderItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  unitPrice: event.target.value,
-                                };
-                              }),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="destructive"
-                          onClick={() => {
-                            setOrderItemRows((current) =>
-                              current.filter(
-                                (_, entryIndex) => entryIndex !== index,
-                              ),
-                            );
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {!isJoinDataLoading &&
-              config.joinEditor === "transaction_items" ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Transaction items</Label>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="outline"
-                      onClick={() => {
-                        setTransactionItemRows((current) => [
-                          ...current,
-                          {
-                            kind: "product",
-                            referenceId: "",
-                            amount: "0",
-                          },
-                        ]);
-                      }}
-                    >
-                      Add item
-                    </Button>
-                  </div>
-
-                  {transactionItemRows.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No items configured.
-                    </p>
-                  ) : null}
-
-                  {transactionItemRows.map((item, index) => (
-                    <div
-                      key={item.id ?? `transaction-item-${index}`}
-                      className="grid gap-2 md:grid-cols-12"
-                    >
-                      <div className="md:col-span-3">
-                        <Select
-                          value={item.kind}
-                          onValueChange={(nextValue) => {
-                            setTransactionItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  kind: nextValue as TransactionItemDraft["kind"],
-                                };
-                              }),
-                            );
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Kind" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {TRANSACTION_ITEM_KIND_OPTIONS.map((option) => (
-                              <SelectItem key={option} value={option}>
-                                {option}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="md:col-span-5">
-                        <Input
-                          value={item.referenceId}
-                          placeholder="Reference id (optional)"
-                          onChange={(event) => {
-                            setTransactionItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  referenceId: event.target.value,
-                                };
-                              }),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={item.amount}
-                          onChange={(event) => {
-                            setTransactionItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  amount: event.target.value,
-                                };
-                              }),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="destructive"
-                          onClick={() => {
-                            setTransactionItemRows((current) =>
-                              current.filter(
-                                (_, entryIndex) => entryIndex !== index,
-                              ),
-                            );
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              {!isJoinDataLoading && config.joinEditor === "shipment_items" ? (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <Label>Shipment items</Label>
-                    <Button
-                      type="button"
-                      size="xs"
-                      variant="outline"
-                      onClick={() => {
-                        setShipmentItemRows((current) => [
-                          ...current,
-                          {
-                            orderItemId: "",
-                            quantity: "1",
-                          },
-                        ]);
-                      }}
-                    >
-                      Add item
-                    </Button>
-                  </div>
-
-                  {shipmentItemRows.length === 0 ? (
-                    <p className="text-muted-foreground text-sm">
-                      No items configured.
-                    </p>
-                  ) : null}
-
-                  {shipmentItemRows.map((item, index) => (
-                    <div
-                      key={item.id ?? `shipment-item-${index}`}
-                      className="grid gap-2 md:grid-cols-12"
-                    >
-                      <div className="md:col-span-7">
-                        <Select
-                          value={item.orderItemId || SELECT_NONE}
-                          onValueChange={(nextValue) => {
-                            setShipmentItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  orderItemId:
-                                    nextValue === SELECT_NONE ? "" : nextValue,
-                                };
-                              }),
-                            );
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select order item" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={SELECT_NONE}>None</SelectItem>
-                            {shipmentOrderItemOptions.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="md:col-span-3">
-                        <Input
-                          type="number"
-                          min="1"
-                          value={item.quantity}
-                          onChange={(event) => {
-                            setShipmentItemRows((current) =>
-                              current.map((entry, entryIndex) => {
-                                if (entryIndex !== index) {
-                                  return entry;
-                                }
-
-                                return {
-                                  ...entry,
-                                  quantity: event.target.value,
-                                };
-                              }),
-                            );
-                          }}
-                        />
-                      </div>
-
-                      <div className="md:col-span-2">
-                        <Button
-                          type="button"
-                          size="xs"
-                          variant="destructive"
-                          onClick={() => {
-                            setShipmentItemRows((current) =>
-                              current.filter(
-                                (_, entryIndex) => entryIndex !== index,
-                              ),
-                            );
-                          }}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+          {dialogMode === "edit" &&
+          config.joinEditor &&
+          !config.fieldGroups ? (
+            <RelatedRecordsSection
+              config={config}
+              isJoinDataLoading={isJoinDataLoading}
+              profileRoleOptions={profileRoleOptions}
+              profileRoleIds={profileRoleIds}
+              setProfileRoleIds={setProfileRoleIds}
+              customerGroupOptions={customerGroupOptions}
+              customerGroupIds={customerGroupIds}
+              setCustomerGroupIds={setCustomerGroupIds}
+              productTagOptions={productTagOptions}
+              productTagIds={productTagIds}
+              setProductTagIds={setProductTagIds}
+              formValues={formValues}
+              productSizeRows={productSizeRows}
+              setProductSizeRows={setProductSizeRows}
+              orderItemProductOptions={orderItemProductOptions}
+              orderItemRows={orderItemRows}
+              setOrderItemRows={setOrderItemRows}
+              transactionItemRows={transactionItemRows}
+              setTransactionItemRows={setTransactionItemRows}
+              shipmentOrderItemOptions={shipmentOrderItemOptions}
+              shipmentItemRows={shipmentItemRows}
+              setShipmentItemRows={setShipmentItemRows}
+            />
           ) : null}
 
           {dialogMode === "create" && config.joinEditor ? (
