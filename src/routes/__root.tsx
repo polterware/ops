@@ -41,6 +41,10 @@ export const Route = createRootRoute({
         content: "width=device-width, initial-scale=1",
       },
       {
+        name: "google",
+        content: "notranslate",
+      },
+      {
         title: "OPS",
       },
     ],
@@ -303,7 +307,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body className="h-full">
+      <body className="h-full" translate="no">
         {children}
         <Toaster theme="dark" position="bottom-right" />
         <Scripts />
