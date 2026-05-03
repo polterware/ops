@@ -1,6 +1,24 @@
 # Ops
 
+> **Status:** Active
+> This project is currently maintained as a Tauri desktop operations app.
+
 Manage your business without relying on expensive SaaS. Ops is an open-source desktop app that brings together product catalog, inventory, orders, sales, payments, and reports in a single interface powered by [Supabase](https://supabase.com).
+
+## Summary
+
+- [What Ops Does](#what-ops-does)
+- [Goals](#goals)
+- [Screenshots](#screenshots)
+- [Tech Stack](#tech-stack)
+- [Prerequisites](#prerequisites)
+- [Quick Start](#quick-start)
+- [Scripts](#scripts)
+- [Project Structure](#project-structure)
+- [Security Model](#security-model)
+- [Contributing](#contributing)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
 
 ## What Ops Does
 
@@ -17,6 +35,13 @@ Manage your business without relying on expensive SaaS. Ops is an open-source de
 - Data protected by row-level access rules in the database (Row Level Security)
 - Critical operations (inventory reservation, sale finalization, refunds) use transactional server-side functions
 - JWT-based authentication via Supabase Auth
+
+## Goals
+
+- Give small teams a desktop operations workspace without forcing them into expensive SaaS suites.
+- Centralize catalog, inventory, orders, sales, payments, and analytics in one app.
+- Keep critical business operations protected by database rules and explicit role-based access.
+- Make the app practical for local desktop use while still relying on a shared backend source of truth.
 
 ## Screenshots
 
