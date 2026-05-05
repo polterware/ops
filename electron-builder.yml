@@ -20,7 +20,6 @@ mac:
     - zip
 publish:
   provider: github
-  owner: polterware
+  owner: rckbrcls
   repo: ops
 electronUpdaterCompatibility: ">=2.16"
-

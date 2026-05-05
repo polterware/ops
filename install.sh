@@ -6,12 +6,12 @@ set -euo pipefail
 # curl-installable script for macOS
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/polterware/ops/main/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/rckbrcls/ops/main/install.sh | bash
 #   curl -fsSL ... | bash -s -- --version v1.2.0
 # ──────────────────────────────────────────────────────────────
 
 VERSION=""
-REPO="polterware/ops"
+REPO="rckbrcls/ops"
 TMP_DIR=""
 
 # ── Helpers ───────────────────────────────────────────────────
@@ -46,7 +46,7 @@ Environment:
 
 Examples:
   # Latest release
-  curl -fsSL https://raw.githubusercontent.com/polterware/ops/main/install.sh | bash
+  curl -fsSL https://raw.githubusercontent.com/rckbrcls/ops/main/install.sh | bash
 
   # Pinned version
   curl -fsSL ... | bash -s -- --version v1.2.0

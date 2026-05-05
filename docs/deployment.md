@@ -18,7 +18,7 @@ The desktop release configuration lives in:
 - Build resources directory: `build`.
 - Packaged files: Electron main, preload, renderer output, and `package.json`.
 - macOS targets: `dmg` and `zip`.
-- GitHub publishing target: `polterware/ops`.
+- GitHub publishing target: `rckbrcls/ops`.
 
 ## macOS GitHub Actions Workflow
 
@@ -70,7 +70,7 @@ Do not commit signing certificates, passwords, API keys, or generated private ke
 Example documented by the script:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/polterware/ops/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/rckbrcls/ops/main/install.sh | bash
 ```
 
 ## Build Commands
